@@ -66,7 +66,7 @@ parser.add_argument('--additional_step', default= 100000, help='the additional i
 
 # ============== hyper-param ====================
 parser.add_argument('--pos_weight', '-p_w', default=0.003, type=float, help='weight of the pos term')
-parser.add_argument('--downsize', default=16, type=float,help='grid cell size for superpixel training ')
+parser.add_argument('--downsize', default=16, type=int,help='grid cell size for superpixel training ')
 
 # ================= other setting ===================
 parser.add_argument('--gpu', default= '0', type=str, help='gpu id')
@@ -81,6 +81,19 @@ parser.add_argument('--no-date', action='store_true',  help='don\'t append date 
 best_EPE = -1
 n_iter = 0
 args = parser.parse_args()
+
+
+def make_colored_spixel_map(spixel_idx):
+    h, w = spixel_idx.shape
+    nsp = torch.max(spixel_idx) + 1
+
+    random_color_map = torch.randint(0, 255, [nsp, 3], dtype=torch.uint8, device=spixel_idx.device)
+    sp_idx = spixel_idx.reshape(-1, 1).expand(-1, 3)
+
+    colored_map = torch.gather(random_color_map, dim=0, index=sp_idx.long())
+    colored_map = colored_map.reshape(h, w, -1)
+
+    return colored_map.permute(2, 0, 1).detach().cpu().numpy()
 
 # !----- NOTE the current code does not support cpu training -----!
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -321,6 +334,9 @@ def train(train_loader, model, optimizer, epoch, train_writer, init_spixl_map_id
         spixel_viz, _ = get_spixel_image(input_l_save, spixel_lab_save)
         train_writer.add_image('Spixel viz', spixel_viz, epoch)
 
+        spixel_color_map_save = make_colored_spixel_map(spixel_lab_save)
+        train_writer.add_image('Spixel color map', spixel_color_map_save, epoch)
+
         #save associ map,  --- for debug only
         # _, prob_idx = torch.max(output, dim=1, keepdim=True)
         # prob_map_save = make_grid(assign2uint8(prob_idx))
@@ -399,6 +415,9 @@ def validate(val_loader, model, epoch, val_writer, init_spixl_map_idx, xy_feat):
         val_writer.add_image('Input', input_l_save, epoch)
         val_writer.add_image('label', label_save, epoch)
         val_writer.add_image('Spixel viz', spixel_viz, epoch)
+
+        spixel_color_map_save = make_colored_spixel_map(spixel_lab_save)
+        val_writer.add_image('Spixel color map', spixel_color_map_save, epoch)
 
         # --- for debug
         #     _, prob_idx = torch.max(assign, dim=1, keepdim=True)
