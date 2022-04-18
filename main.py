@@ -245,6 +245,9 @@ def main():
             print("Train finished!")
             break
 
+        if epoch+1 % 10 == 0:
+            save_checkpoint(rec_dict, is_best=False, filename=f'epoch_{epoch}.tar')
+
         if best_EPE < 0:
             best_EPE = avg_sem
         is_best = avg_sem < best_EPE
