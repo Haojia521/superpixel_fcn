@@ -13,11 +13,6 @@ class DatasetBase(Dataset):
         self.data_dir = osp.join(self.root, split)
         self.index = self.collect_data_index()
 
-        # for test
-        if split == 'val':
-            self.index = self.index[:-4]
-            self.index.extend(['val_1032', 'val_1033', 'val_1034', 'val_1035'])
-
         self.transform = transform
         self.target_transform = target_transform
         self.co_transforms = co_transforms
@@ -46,7 +41,7 @@ class DatasetBase(Dataset):
             img, gt = self.co_transforms([img], gt)
 
         if self.transform is not None:
-            img = self.transform(img[0])
+            img = self.transform(img[0] if isinstance(img, list) else img)
 
         if self.target_transform is not None:
             gt = self.target_transform(gt)
