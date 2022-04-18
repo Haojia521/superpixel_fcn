@@ -245,7 +245,7 @@ def main():
             print("Train finished!")
             break
 
-        if epoch+1 % 10 == 0:
+        if (epoch+1) % 10 == 0:
             save_checkpoint(rec_dict, is_best=False, filename=f'epoch_{epoch}.tar')
 
         if best_EPE < 0:
