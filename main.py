@@ -18,6 +18,8 @@ import datetime
 from tensorboardX import SummaryWriter
 from train_util import *
 
+from test_multi_scale import get_dataset_mean_value
+
 '''
 Main code for training 
 
@@ -124,16 +126,18 @@ def main():
     save_path = os.path.abspath(args.savepath) + '/' + os.path.join(args.dataset, save_path  +  '_' + timestamp )
 
     # ==========  Data loading code ==============
+    mean_value = get_dataset_mean_value(args.dataset)
+
     input_transform = transforms.Compose([
         flow_transforms.ArrayToTensor(),
         transforms.Normalize(mean=[0,0,0], std=[255,255,255]),
-        transforms.Normalize(mean=[0.411,0.432,0.45], std=[1,1,1])
+        transforms.Normalize(mean=mean_value, std=[1,1,1])
     ])
 
     val_input_transform = transforms.Compose([
         flow_transforms.ArrayToTensor(),
         transforms.Normalize(mean=[0, 0, 0], std=[255, 255, 255]),
-        transforms.Normalize(mean=[0.411, 0.432, 0.45], std=[1, 1, 1])
+        transforms.Normalize(mean=mean_value, std=[1, 1, 1])
     ])
 
     target_transform = transforms.Compose([
@@ -144,7 +148,9 @@ def main():
             flow_transforms.RandomCrop((args.train_img_height ,args.train_img_width)),
             flow_transforms.RandomVerticalFlip(),
             flow_transforms.RandomHorizontalFlip()
-        ])
+    ])
+
+    co_transform_val = flow_transforms.CenterCrop(size=(args.input_img_height, args.input_img_width))
 
     print("=> loading img pairs from '{}'".format(args.data))
     train_set, val_set = datasets.__dict__[args.dataset](
@@ -152,7 +158,8 @@ def main():
         transform=input_transform,
         val_transform = val_input_transform,
         target_transform=target_transform,
-        co_transform=co_transform
+        co_transform=co_transform,
+        co_transform_val=co_transform_val,
     )
     print('{} samples found, {} train samples and {} val samples '.format(len(val_set)+len(train_set),
                                                                            len(train_set),
@@ -273,9 +280,9 @@ def train(train_loader, model, optimizer, epoch, train_writer, init_spixl_map_id
             optimizer.load_state_dict(state_dict)
 
         # ========== complete data loading ================
-        label_1hot = label2one_hot_torch(label.to(device), C=50) # set C=50 as SSN does
+        label_1hot = label2one_hot_torch(label.to(device), C=2) # set C=50 as SSN does  # set C=2 for binary targets
         input_gpu = input.to(device)
-        LABXY_feat_tensor = build_LABXY_feat(label_1hot, xy_feat)  # B* (50+2 )* H * W
+        LABXY_feat_tensor = build_LABXY_feat(label_1hot, xy_feat)  # B* (50+2 )* H * W  # B* (2+2 )* H * W
         torch.cuda.synchronize()
         data_time.update(time.time() - end)
 
@@ -367,9 +374,9 @@ def validate(val_loader, model, epoch, val_writer, init_spixl_map_idx, xy_feat):
     for i, (input, label) in enumerate(val_loader):
 
         # measure data loading time
-        label_1hot = label2one_hot_torch(label.to(device), C=50)
+        label_1hot = label2one_hot_torch(label.to(device), C=2)   # set C=2 for binary targets
         input_gpu = input.to(device)
-        LABXY_feat_tensor = build_LABXY_feat(label_1hot, xy_feat)  # B* 50+2 * H * W
+        LABXY_feat_tensor = build_LABXY_feat(label_1hot, xy_feat)  # B* 50+2 * H * W  # B* 2+2 * H * W
         torch.cuda.synchronize()
         data_time.update(time.time() - end)
 

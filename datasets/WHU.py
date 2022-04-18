@@ -39,7 +39,7 @@ class DatasetWhu(DatasetBase):
 
 def WHU(root, transform=None, target_transform=None, val_transform=None, co_transform=None, co_transform_val=None):
     train_dataset = DatasetWhu(root, 'train', transform, target_transform, co_transform)
-    val_dataset = DatasetWhu(root, 'val', val_transform, target_transform, flow_transforms.CenterCrop((288,288)))
+    val_dataset = DatasetWhu(root, 'val', val_transform, target_transform, co_transform_val)
 
     return train_dataset, val_dataset
 
